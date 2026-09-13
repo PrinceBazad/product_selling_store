@@ -1,4 +1,4 @@
-﻿// api/send-otp.js - Sends a 6-digit OTP via Fast2SMS.
+// api/send-otp.js - Sends a 6-digit OTP via Fast2SMS.
 const FAST2SMS_KEY = process.env.FAST2SMS_KEY || "";
 
 function generateOtp() {
@@ -13,28 +13,50 @@ function normalizePhone(phone) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
   try {
     const { phone } = req.body || {};
     const fullPhone = normalizePhone(phone);
-    if (!fullPhone || fullPhone.length < 12) return res.status(400).json({ error: "Invalid phone number" });
+
+    if (!fullPhone || fullPhone.length < 12) {
+      return res.status(400).json({ error: "Invalid phone number. Enter 10 digits." });
+    }
+
     const otp = generateOtp();
+
+    // Demo mode: no API key configured
     if (!FAST2SMS_KEY) {
-      console.log("[otp] skipped (no FAST2SMS_KEY): " + fullPhone + " OTP " + otp);
+      console.log("[otp] DEMO mode - phone: " + fullPhone + ", OTP: " + otp);
       return res.json({ ok: true, skipped: true, demoOtp: otp });
     }
-    const message = "Your OTP for Houselaxmicloth login is " + otp + ". Valid for 5 minutes. Do not share.";
+
+    // Real SMS via Fast2SMS
+    const message = "Your OTP for Houselaxmicloth login is " + otp + ". Valid for 5 minutes. Do not share this OTP with anyone.";
     const url = "https://www.fast2sms.com/dev/bulkV2?authorization=" + FAST2SMS_KEY + "&sender_id=FSTSMS&message=" + encodeURIComponent(message) + "&language=english&route=p&numbers=" + fullPhone;
-    const resp = await fetch(url, { method: "GET" });
-    const data = await resp.json();
-    if (data.return === true || resp.ok) {
-      return res.json({ ok: true, otp });
-    } else {
-      console.error("[otp] fast2sms error:", data);
-      return res.status(500).json({ error: "Failed to send OTP" });
+
+    try {
+      const resp = await fetch(url, { method: "GET" });
+      const text = await resp.text();
+      let data = {};
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+      if (data.return === true) {
+        console.log("[otp] SMS sent to " + fullPhone);
+        return res.json({ ok: true });
+      }
+
+      // Fast2SMS returned an error - show it in demo mode so user can still login
+      console.error("[otp] Fast2sms error:", JSON.stringify(data));
+      return res.json({ ok: true, skipped: true, demoOtp: otp, smsError: data.message || "SMS failed, using demo mode" });
+    } catch (fetchErr) {
+      // Network error - fall back to demo mode
+      console.error("[otp] Network error:", fetchErr.message);
+      return res.json({ ok: true, skipped: true, demoOtp: otp, smsError: "Network error, using demo mode" });
     }
   } catch (err) {
-    console.error("[otp] send error:", err.message);
-    return res.status(500).json({ error: "Failed to send OTP" });
+    console.error("[otp] Unexpected error:", err.message);
+    return res.status(500).json({ error: "Server error: " + err.message });
   }
 }
