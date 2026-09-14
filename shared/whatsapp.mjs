@@ -5,6 +5,8 @@
 
 const KEY = process.env.WHATSAPP_API_KEY || '';
 const PHONE_ID = process.env.WHATSAPP_PHONE_ID || '';
+// WATI custom endpoint (e.g., live-server-xxxx.wati.io) — find in WATI dashboard > API Docs
+const WATI_ENDPOINT = process.env.WATI_ENDPOINT || '';
 const APP_ORIGIN = process.env.APP_ORIGIN || 'https://online-store-sigma-three.vercel.app';
 
 const money = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
@@ -53,25 +55,35 @@ export async function sendWhatsApp({ to, type, order }) {
     return { ok: true, skipped: true, reason: 'no-api-key' };
   }
 
+  if (!WATI_ENDPOINT) {
+    console.log(`[whatsapp] skipped (no WATI_ENDPOINT): ${type} → ${fullPhone}`);
+    return { ok: true, skipped: true, reason: 'no-wati-endpoint' };
+  }
+
   const message = renderWhatsApp(type, order);
   try {
-    // WATI API: send text message
-    const resp = await fetch(`https://api.wati.io/v1/sendSessionMessage/${fullPhone}`, {
+    // WATI API: send session message (form data, not JSON)
+    const formData = new URLSearchParams();
+    formData.append('messageText', message);
+
+    const url = `https://${WATI_ENDPOINT}/api/v1/sendSessionMessage/${fullPhone}`;
+    console.log(`[whatsapp] sending to WATI: ${url}`);
+
+    const resp = await fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${KEY}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ messageText: message }),
+      body: formData,
     });
 
+    const text = await resp.text();
+    console.log(`[whatsapp] WATI response ${resp.status}: ${text.slice(0, 300)}`);
+
     if (!resp.ok) {
-      const text = await resp.text();
-      console.error('[whatsapp] WATI error', resp.status, text.slice(0, 300));
       return { ok: false, error: `wati ${resp.status}: ${text.slice(0, 200)}` };
     }
 
-    console.log(`[whatsapp] sent ${type} → ${fullPhone}`);
     return { ok: true };
   } catch (err) {
     console.error('[whatsapp] send error:', err.message);
