@@ -1,6 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// shared/whatsapp.mjs — WhatsApp order notifications (WhatsApp Business API).
-// Lives OUTSIDE api/ so Vercel never treats it as a function.
+// shared/whatsapp.mjs — WhatsApp order notifications via WATI.
 // Sends only if WHATSAPP_API_KEY is configured — otherwise logs and skips.
 // ─────────────────────────────────────────────────────────────
 
@@ -36,119 +35,43 @@ export function renderWhatsApp(type, orderRaw) {
   return COPY[type] || COPY.placed;
 }
 
-/** Send a WhatsApp message. Always returns { ok } — never throws. */
+/**
+ * Send a WhatsApp text message via WATI.
+ * @param {object} opts
+ * @param {string} opts.to — phone number (e.g. "919876543210")
+ * @param {string} opts.type — status type (e.g. "placed")
+ * @param {object} opts.order — order data
+ * @returns {Promise<{ok: boolean, error?: string, skipped?: boolean}>}
+ */
 export async function sendWhatsApp({ to, type, order }) {
   const phone = String(to || '').replace(/\D/g, '');
   if (!phone || phone.length < 10) return { ok: false, error: 'invalid phone' };
-  const fullPhone = phone.length === 10 ? '91' + phone : phone;
+  const fullPhone = phone.startsWith('91') && phone.length === 12 ? phone : '91' + phone;
 
-  if (!KEY || !PHONE_ID) {
-    console.log(`[whatsapp] skipped (no WHATSAPP_API_KEY/PHONE_ID): ${type} → ${fullPhone}`);
-    return { ok: true, skipped: true };
+  if (!KEY) {
+    console.log(`[whatsapp] skipped (no WHATSAPP_API_KEY): ${type} → ${fullPhone}`);
+    return { ok: true, skipped: true, reason: 'no-api-key' };
   }
 
   const message = renderWhatsApp(type, order);
   try {
-    const resp = await fetch(`https://graph.facebook.com/v18.0/${PHONE_ID}/messages`, {
+    // WATI API: send text message
+    const resp = await fetch(`https://api.wati.io/v1/sendSessionMessage/${fullPhone}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: fullPhone,
-        type: 'text',
-        text: { body: message },
-      }),
+      body: JSON.stringify({ messageText: message }),
     });
+
     if (!resp.ok) {
       const text = await resp.text();
-      console.error('[whatsapp] error', resp.status, text.slice(0, 300));
-      return { ok: false, error: `whatsapp ${resp.status}` };
+      console.error('[whatsapp] WATI error', resp.status, text.slice(0, 300));
+      return { ok: false, error: `wati ${resp.status}: ${text.slice(0, 200)}` };
     }
-    return { ok: true };
-  } catch (err) {
-    console.error('[whatsapp] send error:', err.message);
-    return { ok: false, error: err.message };
-  }
-}
 
-/** Build a WhatsApp deep-link for sharing (no API needed). */
-export function whatsappShareLink(phone, text) {
-  const msg = encodeURIComponent(text);
-  const phonePart = phone ? `?phone=${String(phone).replace(/\D/g, '')}` : '';
-  return `https://wa.me/${phonePart}&text=${msg}`;
-}
-
-// ─────────────────────────────────────────────────────────────
-// shared/whatsapp.mjs — WhatsApp order notifications (Cloud API).
-// Sends via Meta's WhatsApp Business Cloud API when configured.
-// Without credentials it logs and skips — store keeps working.
-// ─────────────────────────────────────────────────────────────
-
-const ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN || '';
-const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_ID || '';
-const APP_ORIGIN = process.env.APP_ORIGIN || 'https://online-store-sigma-three.vercel.app';
-const STORE_NAME = process.env.STORE_NAME || 'Houselaxmicloth Suit Collection';
-
-const money = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
-
-/**
- * Send a WhatsApp message using a pre-approved template.
- * @param {string} to — E.164 phone number (e.g. "919876543210")
- * @param {string} template — template name (e.g. "order_placed")
- * @param {object} params — { id, name, total, mode, tracking, courier, items }
- */
-export async function sendWhatsApp({ to, template, params = {} }) {
-  const phone = String(to || '').replace(/\D/g, '');
-  if (!phone || phone.length < 10) return { ok: false, error: 'invalid phone' };
-  const fullPhone = phone.startsWith('91') && phone.length === 12 ? phone : '91' + phone;
-
-  if (!ACCESS_TOKEN || !PHONE_NUMBER_ID) {
-    console.log(`[whatsapp] skipped (no credentials): ${template} → ${fullPhone}`);
-    return { ok: true, skipped: true };
-  }
-
-  const o = params || {};
-  const components = [
-    {
-      type: 'body',
-      parameters: [
-        { type: 'text', text: String(o.name || 'there') },
-        { type: 'text', text: String(o.id || '') },
-        { type: 'text', text: money(o.total || 0) },
-        { type: 'text', text: String(o.mode || 'online') },
-        { type: 'text', text: String(o.tracking || '') },
-        { type: 'text', text: String(o.courier || '') },
-        { type: 'text', text: String(o.items || '') },
-      ],
-    },
-  ];
-
-  try {
-    const resp = await fetch(`https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${ACCESS_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: fullPhone,
-        type: 'template',
-        template: {
-          name: template,
-          language: { code: 'en' },
-          components,
-        },
-      }),
-    });
-    if (!resp.ok) {
-      const text = await resp.text();
-      console.error('[whatsapp] error', resp.status, text.slice(0, 300));
-      return { ok: false, error: `whatsapp ${resp.status}` };
-    }
+    console.log(`[whatsapp] sent ${type} → ${fullPhone}`);
     return { ok: true };
   } catch (err) {
     console.error('[whatsapp] send error:', err.message);
@@ -189,14 +112,3 @@ export function orderShareText(order) {
   const url = `${APP_ORIGIN}/#/order-status?order=${encodeURIComponent(id)}`;
   return `My order ${id} from ${STORE_NAME}:\n${url}`;
 }
-
-// Template names per status (must be approved in Meta Business Manager).
-export const WHATSAPP_TEMPLATES = {
-  placed: 'order_placed',
-  confirmed: 'order_confirmed',
-  packed: 'order_packed',
-  shipped: 'order_shipped',
-  delivered: 'order_delivered',
-  cancelled: 'order_cancelled',
-  returned: 'order_returned',
-};
