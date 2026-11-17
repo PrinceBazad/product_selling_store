@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext.jsx';
+import { storeName as configStoreName } from '../config.js';
 
 export default function Policies() {
   const { settings } = useData();
-  const name = (settings.storeName || 'Laxmiclothhouse').trim();
+  const name = (settings.storeName || configStoreName).trim();
   const updated = new Date().toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'long',

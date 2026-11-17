@@ -1,7 +1,8 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { formatINR } from '../utils/format.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useData } from '../context/DataContext.jsx';
+import { EXTRA_KEYS } from '../db.js';
 
 const CATS = ['Suits', 'Ethnic', 'Lehenga', 'Saree', 'Daily Wear'];
 
@@ -9,7 +10,7 @@ function dataHasFailures(message) {
   return /failed:\s*[1-9]\d*/i.test(String(message || ''));
 }
 
-// ── Sale banner image (optional) ─────────────────────────────
+// -- Sale banner image (optional) -----------------------------
 // The picked file is turned into a data URL, exactly like product images.
 // Anything wider than MAX_IMAGE_WIDTH (or heftier than ~400 KB) is redrawn
 // on a canvas first, because the whole sales list lives in one Firestore
@@ -25,7 +26,7 @@ function imageFileToDataUrl(file) {
       return;
     }
     if (file.size > MAX_UPLOAD_BYTES) {
-      reject(new Error('That image is larger than 8 MB — please pick a smaller one.'));
+      reject(new Error('That image is larger than 8 MB � please pick a smaller one.'));
       return;
     }
     const reader = new FileReader();
@@ -102,7 +103,7 @@ function SaleRow({ sale, products, onEdit, onDelete, onToggle, onNotify, notifyi
           disabled={notifying}
           onClick={() => onNotify(sale)}
         >
-          {notifying ? 'Notifying…' : 'Notify Customers'}
+          {notifying ? 'Notifying�' : 'Notify Customers'}
         </button>
         {!saleDelMode && (
           <button className="btn btn-sm btn-danger" onClick={() => { if (window.confirm('Delete this sale?')) onDelete(sale.id); }}>Delete</button>
@@ -123,7 +124,7 @@ export default function SalesManager({ sales, products, addSale, updateSale, del
   const [saleDelMode, setSaleDelMode] = useState(false);
   const cats = Array.from(new Set(['Suits', 'Ethnic', 'Lehenga', 'Saree', 'Daily Wear', ...(products || []).map((p) => p?.category).filter(Boolean)]));
   let deletedCats = [];
-  try { deletedCats = JSON.parse(localStorage.getItem('laxmiclothhouse_deleted_cats') || '[]'); } catch {}
+  try { deletedCats = JSON.parse(localStorage.getItem(EXTRA_KEYS.deletedCats) || '[]'); } catch {}
   const filteredCats = cats.filter((c) => !deletedCats.includes(c));
 
   const notifyCustomers = async (sale, ask = true) => {
@@ -150,7 +151,7 @@ export default function SalesManager({ sales, products, addSale, updateSale, del
       if (Number(wa.failed || 0)) waBits.push(`WhatsApp failed: ${Number(wa.failed)}${wa.error ? ` (${wa.error})` : ''}`);
       setNotifyState({
         busyId: '',
-        message: `Sale email sent to ${sent} of ${total} customer(s). Skipped: ${skipped}; failed: ${failed}. ${waBits.join(' · ')}.`,
+        message: `Sale email sent to ${sent} of ${total} customer(s). Skipped: ${skipped}; failed: ${failed}. ${waBits.join(' � ')}.`,
       });
     } catch (error) {
       setNotifyState({ busyId: '', message: error.message || 'Could not notify customers.' });
@@ -167,7 +168,7 @@ export default function SalesManager({ sales, products, addSale, updateSale, del
     const file = e.target.files && e.target.files[0];
     e.target.value = ''; // so the same file can be re-picked later
     if (!file) return;
-    setImageMsg('Preparing image…');
+    setImageMsg('Preparing image�');
     try {
       const dataUrl = await imageFileToDataUrl(file);
       setForm((prev) => ({ ...prev, imageUrl: dataUrl }));
@@ -210,7 +211,7 @@ export default function SalesManager({ sales, products, addSale, updateSale, del
             title={saleDelMode ? 'Done' : 'Delete mode'}
             style={{ marginLeft: 10 }}
           >
-            {saleDelMode ? '✓ Done' : '🗑️'}
+            {saleDelMode ? '? Done' : '???'}
           </button>
         )}
       </div>
@@ -270,10 +271,10 @@ export default function SalesManager({ sales, products, addSale, updateSale, del
               type="text"
               value={form.imageUrl && !form.imageUrl.startsWith('data:') ? form.imageUrl : ''}
               onChange={setF('imageUrl')}
-              placeholder="…or paste an image link (https://…)"
+              placeholder="�or paste an image link (https://�)"
             />
             <span className="muted tiny">
-              Shown as a clickable banner on the home page, roughly 1240 × 400. Any image is
+              Shown as a clickable banner on the home page, roughly 1240 � 400. Any image is
               stretched to fill that whole box, so a wide image looks sharpest (tall posters get
               centre-cropped). Clicking it opens this sale's products. Leave it empty and no
               banner appears anywhere.

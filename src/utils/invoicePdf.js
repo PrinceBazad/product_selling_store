@@ -25,7 +25,7 @@ export function invoiceLines(order, settings) {
   const couponCode = order?.couponCode || "";
   const total = Number(order?.total ?? subtotal + shipping - discount);
   return {
-    brand: s.storeName || "Laxmiclothhouse",
+    brand: s.storeName || "My Store",
     tagline: s.tagline || "Ethnic fashion store",
     phone: s.contactPhone || "",
     email: s.contactEmail || "",

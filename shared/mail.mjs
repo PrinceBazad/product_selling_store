@@ -4,8 +4,8 @@
 // Sends only if RESEND_API_KEY is configured — otherwise it logs
 // and skips, so the store keeps working until you add the key.
 //
-// Design: Laxmiclothhouse brand — maroon #9b1c3d, gold #c9a24b,
-// cream #faf6f0. Solid colors only (email clients strip CSS
+// Design: store brand — maroon #9b1c3d, gold #c9a24b, cream #faf6f0.
+// Solid colors only (email clients strip CSS
 // gradients); tables + inline styles for maximum client support.
 // ─────────────────────────────────────────────────────────────
 
@@ -60,7 +60,7 @@ function brandHeader() {
   return `
     <tr>
       <td style="padding:28px 40px;background:${C.brand};text-align:center">
-        <div style="font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:3px">LAXMICLOTHHOUSE</div>
+        <div style="font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:3px">${esc(STORE_NAME.toUpperCase())}</div>
         <div style="font-size:11px;letter-spacing:4px;color:${C.gold};margin-top:6px">TIMELESS &middot; ELEGANT &middot; YOU</div>
       </td>
     </tr>`;
@@ -414,7 +414,7 @@ ${brandHeader()}
   <div style="font-size:12px;letter-spacing:2px;color:${C.goldDark};font-weight:700">NEW SALE</div>
   <h1 style="font-family:Georgia,serif;color:${C.brand};font-size:30px;margin:10px 0 12px 0">${esc(title)}</h1>
   <p style="font-size:16px;line-height:1.6;color:${C.ink};margin:0">Hi ${esc(customerName || 'there')}, enjoy <strong>${esc(offer)}</strong> on ${esc(scope)}.</p>
-  <p style="font-size:14px;line-height:1.6;color:${C.muted};margin:16px 0 0 0">Shop the latest festive and occasion wear at Laxmiclothhouse while the sale is active.</p>
+  <p style="font-size:14px;line-height:1.6;color:${C.muted};margin:16px 0 0 0">Shop the latest festive and occasion wear at ${esc(STORE_NAME)} while the sale is active.</p>
   <div style="text-align:center;margin:26px 0 8px 0"><a href="${link}" style="display:inline-block;background:${C.brand};color:#fff;text-decoration:none;padding:13px 34px;border-radius:50px;font-size:14px;font-weight:600">SHOP THE SALE</a></div>
 </td></tr>
 ${brandFooter()}
@@ -427,7 +427,7 @@ ${brandFooter()}
       body: JSON.stringify({
         from: `${STORE_NAME} <${FROM_EMAIL}>`,
         to: [email],
-        subject: `${title} — ${offer} at Laxmiclothhouse`,
+        subject: `${title} — ${offer} at ${STORE_NAME}`,
         html,
       }),
     });

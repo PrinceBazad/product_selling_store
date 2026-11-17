@@ -12,6 +12,7 @@ import AlertsManager from '../components/AlertsManager.jsx';
 import PdfViewer from '../components/PdfViewer.jsx';
 import { statusMeta } from '../orderFlow.js';
 import { buildOrdersReportPdf, triggerBlobDownload, ordersReportFileName, ordersReportPdfUrl, downloadOrdersReportPdf, printOrdersReportPdf, filterOrdersByRange } from '../utils/ordersReportPdf.js';
+import { EXTRA_KEYS } from '../db.js';
 
 const CATS = ['Suits', 'Ethnic', 'Lehenga', 'Saree', 'Daily Wear'];
 const ALL_PAY = [
@@ -363,16 +364,16 @@ export default function Admin() {
   const [autoOpened, setAutoOpened] = useState(false);
   const [variantDrafts, setVariantDrafts] = useState({});
   const [extraCats, setExtraCats] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('laxmiclothhouse_extra_cats') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(EXTRA_KEYS.extraCats) || '[]'); } catch { return []; }
   });
   const [deletedCats, setDeletedCats] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('laxmiclothhouse_deleted_cats') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(EXTRA_KEYS.deletedCats) || '[]'); } catch { return []; }
   });
   useEffect(() => {
-    try { localStorage.setItem('laxmiclothhouse_extra_cats', JSON.stringify(extraCats)); } catch {}
+    try { localStorage.setItem(EXTRA_KEYS.extraCats, JSON.stringify(extraCats)); } catch {}
   }, [extraCats]);
   useEffect(() => {
-    try { localStorage.setItem('laxmiclothhouse_deleted_cats', JSON.stringify(deletedCats)); } catch {}
+    try { localStorage.setItem(EXTRA_KEYS.deletedCats, JSON.stringify(deletedCats)); } catch {}
   }, [deletedCats]);
   const categories = useMemo(() => {
     const base = ['Suits', 'Ethnic', 'Lehenga', 'Saree', 'Daily Wear'];

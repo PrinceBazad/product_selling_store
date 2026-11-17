@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     );
     report.hint =
       'Verify a domain at https://resend.com/domains, then set MAIL_FROM to an address on it ' +
-      '(e.g. orders@laxmiclothhouse.com) and redeploy.';
+      '(e.g. orders@yourdomain.com) and redeploy.';
   }
 
   // When the key is present, ask Resend which domains are actually verified.

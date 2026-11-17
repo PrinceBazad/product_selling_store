@@ -1,15 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext.jsx';
+import { storeName as configStoreName, storeEmail as configEmail, contactPhone as configPhone, contactAddress as configAddress } from '../config.js';
 
 export default function Terms() {
   const { settings } = useData();
-  const name = (settings.storeName || 'Laxmiclothhouse').trim();
-  const email = settings.contactEmail || 'support@laxmiclothhouse.com';
-  const phone = settings.contactPhone || '+91 85699 27004';
-  const address =
-    settings.contactAddress ||
-    'Najafgarh Road, Near Balour More, Opp. Sector 9, Bahadurgarh - 124507';
+  const name = (settings.storeName || configStoreName).trim();
+  const email = settings.contactEmail || configEmail;
+  const phone = settings.contactPhone || configPhone;
+  const address = settings.contactAddress || configAddress;
   const updated = new Date().toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'long',
@@ -97,7 +96,7 @@ export default function Terms() {
         <h2>9. Governing law</h2>
         <p>
           These Terms are governed by the laws of India. Any dispute is subject to
-          the exclusive jurisdiction of the courts at Bahadurgarh, Haryana.
+          the exclusive jurisdiction of the competent courts located at the store's registered address.
         </p>
 
         <h2>10. Contact</h2>

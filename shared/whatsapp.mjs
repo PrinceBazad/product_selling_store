@@ -32,6 +32,7 @@ const TEMPLATE_PARAMS = String(process.env.WHATSAPP_TEMPLATE_PARAMS || '1').trim
 const SALE_TEMPLATE_NAME = String(process.env.WHATSAPP_SALE_TEMPLATE_NAME || 'sale_notify').trim();
 const SALE_TEMPLATE_LANG = String(process.env.WHATSAPP_SALE_TEMPLATE_LANG || 'en').trim();
 const GRAPH_VERSION   = String(process.env.WHATSAPP_GRAPH_VERSION || 'v23.0').trim();
+const STORE_NAME      = String(process.env.STORE_NAME || '').trim() || 'Store';
 // Public store origin. APP_ORIGIN in Vercel wins; Vercel's own URL env vars
 // are the fallback so links stay correct without hardcoding a domain.
 const APP_ORIGIN = (() => {
@@ -61,7 +62,7 @@ export function buildWhatsAppLink(text, phone = '') {
 export function productShareText(product) {
   const name  = product.name || 'this product';
   const price = money(product.price || 0);
-  return `Check out "${name}" (₹${price}) at Laxmiclothhouse: ${APP_ORIGIN}/#/product/${product.id || ''}`;
+  return `Check out "${name}" (₹${price}) at ${STORE_NAME}: ${APP_ORIGIN}/#/product/${product.id || ''}`;
 }
 
 // ── Meta Cloud API helpers ───────────────────────────────────
@@ -295,7 +296,7 @@ function metaSalePayload(sale, name, toE164) {
 export function renderSaleWhatsApp(sale, name = 'there') {
   const s = sale || {};
   const { amount, valid, link } = saleOfferText(s);
-  return `Sale at Laxmiclothhouse!\n\nHi ${name}! "${String(s.name || 'Special sale')}" is live: ${amount}. ${valid}\n\nShop: ${link}`;
+  return `Sale at ${STORE_NAME}!\n\nHi ${name}! "${String(s.name || 'Special sale')}" is live: ${amount}. ${valid}\n\nShop: ${link}`;
 }
 
 /**

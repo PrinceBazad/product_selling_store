@@ -129,7 +129,7 @@ export function buildOrdersReportPdf(orders, opts = {}) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
   doc.setTextColor(...BRAND);
-  doc.text("LAXMICLOTHHOUSE", M, 13);
+  doc.text(STORE_LABEL(opts.storeName), M, 13);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(...GOLD);
@@ -282,4 +282,4 @@ export function buildOrdersReportPdf(orders, opts = {}) {
   return { blob: new Blob([buf], { type: "application/pdf" }), fileName };
 }
 
-const STORE_LABEL = (storeName) => String(storeName || "Laxmiclothhouse").toUpperCase();
+const STORE_LABEL = (storeName) => String(storeName || "My Store").toUpperCase();

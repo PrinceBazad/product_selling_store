@@ -31,7 +31,7 @@ const SCAN_MEANINGS = {
 
 export default function OrderStatus() {
   const { user } = useAuth();
-  const { findOrder, canCancel, cancelOrder, postApi } = useData();
+  const { findOrder, canCancel, cancelOrder, postApi, settings } = useData();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [query, setQuery] = useState('');
@@ -511,7 +511,7 @@ export default function OrderStatus() {
           <div className="share-whatsapp">
             <a
               className="btn btn-sm btn-whatsapp"
-              href={whatsappShareLink(null, `Hi! Check my order status: Order ${order.id} from Laxmiclothhouse Suit Collection. Track here: ${window.location.origin}/#/track?order=${order.id}`)}
+              href={whatsappShareLink(null, `Hi! Check my order status: Order ${order.id} from ${settings.storeName || 'our store'}. Track here: ${window.location.origin}/#/track?order=${order.id}`)}
               target="_blank"
               rel="noopener noreferrer"
             >

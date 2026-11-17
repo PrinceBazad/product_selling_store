@@ -37,4 +37,14 @@ export const razorpayKeyId = str(env.VITE_RAZORPAY_KEY_ID);
 export const appOrigin = str(env.VITE_APP_ORIGIN) || (typeof window !== 'undefined' ? window.location.origin : '');
 
 /** Store display name. */
-export const storeName = str(env.VITE_STORE_NAME) || 'Laxmiclothhouse';
+export const storeName = str(env.VITE_STORE_NAME) || 'My Store';
+
+/** Public contact e-mail shown on policy pages and used in mailto links. */
+export const storeEmail = str(env.VITE_STORE_EMAIL) || 'support@example.com';
+
+/** Public contact phone / address (blank until you set them). */
+export const contactPhone = str(env.VITE_CONTACT_PHONE);
+export const contactAddress = str(env.VITE_CONTACT_ADDRESS);
+
+/** Instagram profile URL — the footer link is hidden when this is empty. */
+export const instagramUrl = str(env.VITE_INSTAGRAM_URL);

@@ -1,12 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext.jsx';
+import { storeName as configStoreName, storeEmail as configEmail, contactPhone as configPhone } from '../config.js';
 
 export default function CancellationRefund() {
   const { settings } = useData();
-  const name = (settings.storeName || 'Laxmiclothhouse').trim();
-  const email = settings.contactEmail || 'support@laxmiclothhouse.com';
-  const phone = settings.contactPhone || '+91 85699 27004';
+  const name = (settings.storeName || configStoreName).trim();
+  const email = settings.contactEmail || configEmail;
+  const phone = settings.contactPhone || configPhone;
   const updated = new Date().toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'long',

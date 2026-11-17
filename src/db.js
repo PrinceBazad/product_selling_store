@@ -1,28 +1,38 @@
-﻿// ─────────────────────────────────────────────────────────────
-// db.js — localStorage persistence layer for the whole store.
+// -------------------------------------------------------------
+// db.js � localStorage persistence layer for the whole store.
 // Provides a tiny synchronous "database" with seeding support.
 // Syncs to Firebase Firestore for cross-device consistency.
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 
 import { initFirebase, isFirebaseReady, firestoreSet, firestoreGet, firestoreListen } from './firebase.js';
-import { razorpayKeyId } from './config.js';
+import { razorpayKeyId, storeName, storeEmail, contactPhone, contactAddress } from './config.js';
 
-const KEYS = {
-  users: 'houselaxmicloth_users',
-  products: 'houselaxmicloth_products',
-  orders: 'houselaxmicloth_orders',
-  session: 'houselaxmicloth_session',
-  cart: 'houselaxmicloth_cart',
-  settings: 'houselaxmicloth_settings',
-  wishlist: 'houselaxmicloth_wishlist',
-  reviews: 'houselaxmicloth_reviews',
-  messages: 'houselaxmicloth_messages',
-  coupons: 'houselaxmicloth_coupons',
-  payments: 'houselaxmicloth_payments',
-  sales: 'houselaxmicloth_sales',
-  alerts: 'houselaxmicloth_alerts',
-  pdfs: 'houselaxmicloth_pdfs',
-  notifications: 'houselaxmicloth_notifications',
+// localStorage namespace. Change NS (or set a different origin) to keep two
+// stores built from this template from sharing browser data.
+const NS = 'store_';
+
+export const KEYS = {
+  users: NS + 'users',
+  products: NS + 'products',
+  orders: NS + 'orders',
+  session: NS + 'session',
+  cart: NS + 'cart',
+  settings: NS + 'settings',
+  wishlist: NS + 'wishlist',
+  reviews: NS + 'reviews',
+  messages: NS + 'messages',
+  coupons: NS + 'coupons',
+  payments: NS + 'payments',
+  sales: NS + 'sales',
+  alerts: NS + 'alerts',
+  pdfs: NS + 'pdfs',
+  notifications: NS + 'notifications',
+};
+
+/** Extra per-admin localStorage keys that live outside the main KEYS map. */
+export const EXTRA_KEYS = {
+  extraCats: NS + 'extra_cats',
+  deletedCats: NS + 'deleted_cats',
 };
 
 // Initialize Firebase (non-blocking)
@@ -31,14 +41,14 @@ initFirebase();
 // Sync helpers - write to Firestore when localStorage changes
 function syncToFirestore(key, data) {
   if (!isFirebaseReady()) return;
-  const collection = key.replace('houselaxmicloth_', '');
+  const collection = key.slice(NS.length);
   firestoreSet('store', collection, { data, updatedAt: Date.now() });
 }
 
 // Listen for Firestore changes and update localStorage
 export function listenFromFirestore(key, callback) {
   if (!isFirebaseReady()) return () => {};
-  const collection = key.replace('houselaxmicloth_', '');
+  const collection = key.slice(NS.length);
   return firestoreListen('store', collection, (docData) => {
     if (docData && docData.data) {
       localStorage.setItem(key, JSON.stringify(docData.data));
@@ -73,7 +83,7 @@ function uid(prefix = '') {
 function seedProducts() {
   const names = [
     ['2D Suit', 'Classic 2D printed suit set with matching dupatta.'],
-    ['2D Suit — Teej Special', 'Festive teej special 2D suit in rich colours.'],
+    ['2D Suit � Teej Special', 'Festive teej special 2D suit in rich colours.'],
     ['3D Flowers', 'Hand-worked 3D floral design on premium fabric.'],
     ['3D Punjab Suit', 'Heavy 3D Punjabi-style designer suit.'],
     ['3D Suit (Maroon)', 'Elegant maroon 3D designer suit for occasions.'],
@@ -120,7 +130,7 @@ function seedUsers() {
     {
       id: 'U-admin',
       name: 'Store Admin',
-      email: 'admin@laxmiclothhouse.com',
+      email: 'admin@example.com',
       // password stored plainly for demo purposes (hint only)
       password: 'admin123',
       role: 'admin',
@@ -130,22 +140,24 @@ function seedUsers() {
 
 // ---- Default site settings ---------------------------------
 const DEFAULT_SETTINGS = {
-  storeName: 'Laxmiclothhouse Suit Collection',
+  storeName: storeName,
      logoUrl: null,
    logoWidth: 40,
-   logoLetter: 'B',
+   logoLetter: String(storeName || 'S').charAt(0).toUpperCase(),
   tagline: 'Suit Collection',
-  announcement: 'Free shipping on orders above ₹1499 · COD available across India',
+  announcement: 'Free shipping on orders above ?1499 � COD available across India',
   heroHeading: 'Designer Suits & Ethnic Elegance',
   heroSubheading:
-    'Heavy 3D work, rich zari, finest fabrics — made for your special days.',
-  contactPhone: '+91 98765 43210',
-  contactEmail: 'support@laxmiclothhouse.com',
-  contactAddress:
-    'Najafgarh Road, Near Balour More, Opp. Sector 9, Bahadurgarh — 124507',
+    'Heavy 3D work, rich zari, finest fabrics � made for your special days.',
+  // Contact details come from VITE_CONTACT_PHONE / VITE_CONTACT_ADDRESS /
+  // VITE_STORE_EMAIL (or Admin ? Settings). Empty means "not set yet" so the
+  // pages can hide or fall back instead of showing someone else's details.
+  contactPhone: contactPhone,
+  contactEmail: storeEmail,
+  contactAddress: contactAddress,
   // Razorpay merchant (public) key. Supplied by VITE_RAZORPAY_KEY_ID in
-  // Vercel → Settings → Environment Variables. Vercel wins over any value
-  // saved in Admin → Settings so the deployment stays the single source.
+  // Vercel ? Settings ? Environment Variables. Vercel wins over any value
+  // saved in Admin ? Settings so the deployment stays the single source.
   razorpayKeyId: razorpayKeyId,
   paymentMode: 'live',
   freeShippingThreshold: 1499,
@@ -155,16 +167,16 @@ const DEFAULT_SETTINGS = {
   deliveryMinDays: 4,
   deliveryMaxDays: 7,
   shippingSource: 'product',  // 'product' | 'delhivery'
-  // Delhivery-style rate card — used when shippingSource === 'delhivery'.
-  // A zone key is matched as: longest `pin:12345` prefix → lowercase state
-  // name → 'default'. Per zone:
-  //   same      flat base charge (₹)
-  //   per500g   added for every 500 g slab of parcel weight (₹)
-  //   codExtra  surcharge when the payment mode is COD (₹)
-  //   minCharge floor for the zone (₹)
+  // Delhivery-style rate card � used when shippingSource === 'delhivery'.
+  // A zone key is matched as: longest `pin:12345` prefix ? lowercase state
+  // name ? 'default'. Per zone:
+  //   same      flat base charge (?)
+  //   per500g   added for every 500 g slab of parcel weight (?)
+  //   codExtra  surcharge when the payment mode is COD (?)
+  //   minCharge floor for the zone (?)
   //   freeAbove free shipping at/above this order value (0 = never free)
-  // Delhivery has no public unauthenticated rate API — the real numbers come
-  // from your Delhivery contract. Edit them in Admin → Settings → Delivery.
+  // Delhivery has no public unauthenticated rate API � the real numbers come
+  // from your Delhivery contract. Edit them in Admin ? Settings ? Delivery.
   rateCard: {
     zones: {
       'pin:124': { same: 40, per500g: 25, codExtra: 20, minCharge: 60, freeAbove: 0 },

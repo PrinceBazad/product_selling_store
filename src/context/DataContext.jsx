@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { db } from '../db.js';
+import { db, KEYS } from '../db.js';
 import { variantKey } from '../utils/stock.js';
 import { listenFromFirestore } from '../db.js';
 
@@ -32,18 +32,18 @@ export function DataProvider({ children }) {
   // (e.g. switching payment mode in Admin should apply to the checkout tab instantly).
   useEffect(() => {
     const onStorage = (e) => {
-      if (e.key === 'houselaxmicloth_settings') setSettings(db.getSettings());
-      else if (e.key === 'houselaxmicloth_products') setProducts(db.getProducts());
-      else if (e.key === 'houselaxmicloth_orders') setOrders(db.getOrders());
-      else if (e.key === 'houselaxmicloth_reviews') setReviews(db.getReviews());
-      else if (e.key === 'houselaxmicloth_messages') setMessages(db.getMessages());
-      else if (e.key === 'houselaxmicloth_coupons') setCoupons(db.getCoupons());
-      else if (e.key === 'houselaxmicloth_payments') setPayments(db.getPayments());
-      else if (e.key === 'houselaxmicloth_sales') setSales((() => { const rows = db.getSales(); return Array.isArray(rows) ? rows.filter((s) => s && s.id && (s.name || s.value != null)) : []; })());
-      else if (e.key === 'houselaxmicloth_alerts') setAlerts(db.getAlerts());
-      else if (e.key === 'houselaxmicloth_pdfs') setPdfs(db.getPdfs());
-      else if (e.key === 'houselaxmicloth_notifications') setNotifications(db.getNotifications());
-      else if (e.key === 'houselaxmicloth_users') setUsers(db.getUsers());
+      if (e.key === KEYS.settings) setSettings(db.getSettings());
+      else if (e.key === KEYS.products) setProducts(db.getProducts());
+      else if (e.key === KEYS.orders) setOrders(db.getOrders());
+      else if (e.key === KEYS.reviews) setReviews(db.getReviews());
+      else if (e.key === KEYS.messages) setMessages(db.getMessages());
+      else if (e.key === KEYS.coupons) setCoupons(db.getCoupons());
+      else if (e.key === KEYS.payments) setPayments(db.getPayments());
+      else if (e.key === KEYS.sales) setSales((() => { const rows = db.getSales(); return Array.isArray(rows) ? rows.filter((s) => s && s.id && (s.name || s.value != null)) : []; })());
+      else if (e.key === KEYS.alerts) setAlerts(db.getAlerts());
+      else if (e.key === KEYS.pdfs) setPdfs(db.getPdfs());
+      else if (e.key === KEYS.notifications) setNotifications(db.getNotifications());
+      else if (e.key === KEYS.users) setUsers(db.getUsers());
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
@@ -51,18 +51,18 @@ export function DataProvider({ children }) {
 
   // Sync across devices via Firestore
   useEffect(() => {
-    const unsubProducts = listenFromFirestore('houselaxmicloth_products', setProducts);
-    const unsubOrders = listenFromFirestore('houselaxmicloth_orders', setOrders);
-    const unsubSettings = listenFromFirestore('houselaxmicloth_settings', setSettings);
-    const unsubReviews = listenFromFirestore('houselaxmicloth_reviews', setReviews);
-    const unsubMessages = listenFromFirestore('houselaxmicloth_messages', setMessages);
-    const unsubCoupons = listenFromFirestore('houselaxmicloth_coupons', setCoupons);
-    const unsubPayments = listenFromFirestore('houselaxmicloth_payments', setPayments);
-    const unsubSales = listenFromFirestore('houselaxmicloth_sales', (d) => setSales(Array.isArray(d) ? d.filter((s) => s && s.id && (s.name || s.value != null)) : []));
-    const unsubAlerts = listenFromFirestore('houselaxmicloth_alerts', setAlerts);
-    const unsubUsers = listenFromFirestore('houselaxmicloth_users', setUsers);
-    const unsubPdfs = listenFromFirestore('houselaxmicloth_pdfs', setPdfs);
-    const unsubNotifications = listenFromFirestore('houselaxmicloth_notifications', setNotifications);
+    const unsubProducts = listenFromFirestore(KEYS.products, setProducts);
+    const unsubOrders = listenFromFirestore(KEYS.orders, setOrders);
+    const unsubSettings = listenFromFirestore(KEYS.settings, setSettings);
+    const unsubReviews = listenFromFirestore(KEYS.reviews, setReviews);
+    const unsubMessages = listenFromFirestore(KEYS.messages, setMessages);
+    const unsubCoupons = listenFromFirestore(KEYS.coupons, setCoupons);
+    const unsubPayments = listenFromFirestore(KEYS.payments, setPayments);
+    const unsubSales = listenFromFirestore(KEYS.sales, (d) => setSales(Array.isArray(d) ? d.filter((s) => s && s.id && (s.name || s.value != null)) : []));
+    const unsubAlerts = listenFromFirestore(KEYS.alerts, setAlerts);
+    const unsubUsers = listenFromFirestore(KEYS.users, setUsers);
+    const unsubPdfs = listenFromFirestore(KEYS.pdfs, setPdfs);
+    const unsubNotifications = listenFromFirestore(KEYS.notifications, setNotifications);
 
     return () => {
       unsubProducts();
@@ -185,7 +185,7 @@ export function DataProvider({ children }) {
     // 3) their wishlist
     let wishlistRemoved = false;
     try {
-      const wKey = 'houselaxmicloth_wishlist_' + (uid || email);
+      const wKey = KEYS.wishlist + '_' + (uid || email);
       if (uid && localStorage.getItem(wKey) !== null) {
         localStorage.removeItem(wKey);
         wishlistRemoved = true;
