@@ -1,28 +1,32 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { firebaseConfig, isFirebaseConfigured } from './config.js';
 
-// Firebase configuration - Replace with your own Firebase project credentials
-// Get these from: https://console.firebase.google.com → Project Settings → General → Your apps
-const firebaseConfig = {
-  apiKey: "REDACTED",
-  authDomain: "laxmiclothhouse-store.firebaseapp.com",
-  projectId: "laxmiclothhouse-store",
-  storageBucket: "laxmiclothhouse-store.firebasestorage.app",
-  messagingSenderId: "743100785287",
-  appId: "1:743100785287:web:a0cf377a9f9c20dda70e22",
-  measurementId: "G-4P5Z648LPH"
-};
+export { isFirebaseConfigured };
 
 let app = null;
 let db = null;
 let initialized = false;
 
+/**
+ * Initialise Firebase ONLY when the project has been given its own
+ * credentials (VITE_FIREBASE_*). With no variables set the store runs
+ * entirely from localStorage — it never contacts any Firebase project.
+ */
 export function initFirebase() {
   if (initialized) return { app, db };
+  if (!isFirebaseConfigured) {
+    console.warn(
+      '[firebase] not configured — running local-only. Set VITE_FIREBASE_API_KEY, ' +
+      'VITE_FIREBASE_PROJECT_ID and VITE_FIREBASE_APP_ID (see SETUP.md).'
+    );
+    return { app, db };
+  }
   try {
     app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     initialized = true;
+    console.log(`[firebase] connected to project "${firebaseConfig.projectId}"`);
   } catch (err) {
     console.warn('Firebase init failed:', err.message);
   }

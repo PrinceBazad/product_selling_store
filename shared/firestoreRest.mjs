@@ -9,9 +9,23 @@
 // succeed if Firestore rules allow them — failures degrade gracefully.
 // ─────────────────────────────────────────────────────────────
 
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'laxmiclothhouse-store';
-const API_KEY = process.env.FIREBASE_WEB_API_KEY || 'REDACTED';
+// Configured entirely by Vercel environment variables:
+//   FIREBASE_PROJECT_ID   — Firebase project id
+//   FIREBASE_WEB_API_KEY  — Firebase web API key (public identifier)
+// Nothing is hardcoded; unset values make every call degrade gracefully.
+const PROJECT_ID = String(process.env.FIREBASE_PROJECT_ID || '').trim();
+const API_KEY = String(process.env.FIREBASE_WEB_API_KEY || '').trim();
 const BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+
+/** True when both Firebase env vars needed for REST calls are present. */
+export function isFirestoreRestConfigured() {
+  return Boolean(PROJECT_ID && API_KEY);
+}
+
+const NOT_CONFIGURED = {
+  ok: false,
+  error: 'Firebase not configured: set FIREBASE_PROJECT_ID and FIREBASE_WEB_API_KEY in Vercel environment variables.',
+};
 
 // ── Decode Firestore REST typed values → plain JS ────────────
 function decode(value) {
@@ -54,6 +68,7 @@ function encodeMap(obj) {
 
 /** Read the orders document. Returns { ok, data (array), updateTime } . */
 export async function getOrdersDoc() {
+  if (!isFirestoreRestConfigured()) return NOT_CONFIGURED;
   try {
     const res = await fetch(`${BASE}/store/orders?key=${API_KEY}`);
     if (!res.ok) return { ok: false, error: `Firestore read failed (HTTP ${res.status})` };
@@ -70,6 +85,7 @@ export async function getOrdersDoc() {
 
 /** Read a store document as plain JS. Used for server-side campaign validation. */
 export async function getStoreDoc(docId, idToken = '') {
+  if (!isFirestoreRestConfigured()) return NOT_CONFIGURED;
   try {
     const res = await fetch(`${BASE}/store/${encodeURIComponent(docId)}?key=${API_KEY}`, {
       headers: idToken ? { Authorization: `Bearer ${idToken}` } : undefined,
@@ -84,6 +100,7 @@ export async function getStoreDoc(docId, idToken = '') {
 
 /** Read one user profile. The bearer token is required by Firestore rules. */
 export async function getUserDoc(uid, idToken = '') {
+  if (!isFirestoreRestConfigured()) return NOT_CONFIGURED;
   try {
     const res = await fetch(`${BASE}/users/${encodeURIComponent(uid)}?key=${API_KEY}`, {
       headers: idToken ? { Authorization: `Bearer ${idToken}` } : undefined,
@@ -98,6 +115,7 @@ export async function getUserDoc(uid, idToken = '') {
 
 /** List registered profiles for an authenticated administrator. */
 export async function listUserDocs(idToken = '') {
+  if (!isFirestoreRestConfigured()) return NOT_CONFIGURED;
   try {
     const res = await fetch(`${BASE}/users?pageSize=500&key=${API_KEY}`, {
       headers: idToken ? { Authorization: `Bearer ${idToken}` } : undefined,
@@ -120,6 +138,7 @@ export async function listUserDocs(idToken = '') {
 
 /** Patch the orders document with a new array. Returns { ok, written } . */
 export async function patchOrdersDoc(data) {
+  if (!isFirestoreRestConfigured()) return { ...NOT_CONFIGURED, written: false };
   try {
     const mask = ['data', 'updatedAt']
       .map((f) => `updateMask.fieldPaths=${f}`)

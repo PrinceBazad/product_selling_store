@@ -4,7 +4,10 @@ import { getUserDoc, listUserDocs, getStoreDoc } from '../shared/firestoreRest.m
 import { sendSaleMail } from '../shared/mail.mjs';
 import { sendSaleWhatsApp } from '../shared/whatsapp.mjs';
 
-const FIREBASE_API_KEY = process.env.FIREBASE_WEB_API_KEY || 'REDACTED';
+// Firebase web API key comes from the Vercel environment (FIREBASE_WEB_API_KEY).
+// It is a public identifier, but it must not be hardcoded so the same code
+// can point at another Firebase project without an edit.
+const FIREBASE_API_KEY = String(process.env.FIREBASE_WEB_API_KEY || '').trim();
 const IDENTITY_URL = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_API_KEY}`;
 const MAX_SALE_NAME = 120;
 const SALE_TYPES = new Set(['product', 'category', 'storewide', 'flash']);
@@ -16,6 +19,9 @@ function bearerToken(req) {
 
 async function verifyAdmin(idToken) {
   if (!idToken) return { ok: false, status: 401, error: 'Authentication required.' };
+  if (!FIREBASE_API_KEY) {
+    return { ok: false, status: 500, error: 'FIREBASE_WEB_API_KEY is not configured in Vercel environment variables.' };
+  }
   const response = await fetch(IDENTITY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -1,8 +1,7 @@
 // ─────────────────────────────────────────────────────────────
-// server.js — Backend payment server for the store.
-// Creates Razorpay orders (server-side) and verifies payment
-// signatures. This is REQUIRED for Razorpay to work in live/test
-// mode — the frontend cannot create orders without the secret key.
+// server.js — Local backend for the store (dev only; Vercel runs
+// the serverless functions in api/ instead). Reads its config from
+// environment variables — see .env.example for the full list.
 // ─────────────────────────────────────────────────────────────
 
 import express from 'express';
@@ -13,14 +12,23 @@ import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'REDACTED';
-const RAZORPAY_KEY_SECRET =
-  process.env.RAZORPAY_KEY_SECRET || 'REDACTED';
+const RAZORPAY_KEY_ID = String(process.env.RAZORPAY_KEY_ID || '').trim();
+const RAZORPAY_KEY_SECRET = String(process.env.RAZORPAY_KEY_SECRET || '').trim();
 
-const razorpay = new Razorpay({
-  key_id: RAZORPAY_KEY_ID,
-  key_secret: RAZORPAY_KEY_SECRET,
-});
+function razorpayClient() {
+  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+    const missing = [
+      !RAZORPAY_KEY_ID ? 'RAZORPAY_KEY_ID' : null,
+      !RAZORPAY_KEY_SECRET ? 'RAZORPAY_KEY_SECRET' : null,
+    ].filter(Boolean);
+    const error = new Error(
+      `Razorpay is not configured. Set ${missing.join(' and ')} in .env (local) or Vercel environment variables.`
+    );
+    error.status = 500;
+    throw error;
+  }
+  return new Razorpay({ key_id: RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET });
+}
 
 app.use(cors());
 app.use(express.json());
@@ -47,7 +55,7 @@ app.post('/api/create-order', async (req, res) => {
       payment_capture: 1,
     };
 
-    const order = await razorpay.orders.create(options);
+    const order = await razorpayClient().orders.create(options);
     console.log('[create-order] success, order =', order.id, ', amount =', order.amount);
     res.json({
       order_id: order.id,
@@ -116,7 +124,7 @@ app.post('/api/refund', async (req, res) => {
       });
     }
 
-    const refund = await razorpay.payments.refund(paymentRef, {
+    const refund = await razorpayClient().payments.refund(paymentRef, {
       amount: Math.round(amountInRupees * 100), // paise
       receipt: 'refund_' + orderId,
       notes: { orderId },
@@ -161,7 +169,7 @@ app.post('/api/razorpay', async (req, res) => {
         receipt: 'rcpt_' + Date.now(),
         payment_capture: 1,
       };
-      const order = await razorpay.orders.create(options);
+      const order = await razorpayClient().orders.create(options);
       return res.json({
         order_id: order.id,
         amount: order.amount,
@@ -201,7 +209,7 @@ app.post('/api/razorpay', async (req, res) => {
           message: 'No Razorpay payment to refund. This order was COD or a demo payment - no money was charged.',
         });
       }
-      const refund = await razorpay.payments.refund(paymentRef, {
+      const refund = await razorpayClient().payments.refund(paymentRef, {
         amount: Math.round(amountInRupees * 100),
         receipt: 'refund_' + String(orderId),
         notes: { orderId: String(orderId) },
@@ -224,12 +232,12 @@ app.post('/api/razorpay', async (req, res) => {
       let refund = null;
       let lastErr = null;
       if (refundId) {
-        try { refund = await razorpay.refunds.fetch(refundId); }
+        try { refund = await razorpayClient().refunds.fetch(refundId); }
         catch (e) { lastErr = e; }
       }
       if (!refund && paymentRef && String(paymentRef).startsWith('pay_')) {
         try {
-          const list = await razorpay.refunds.all({ payment_id: paymentRef, count: 10 });
+          const list = await razorpayClient().refunds.all({ payment_id: paymentRef, count: 10 });
           const items = Array.isArray(list?.items) ? list.items : (Array.isArray(list) ? list : []);
           refund = items.slice().sort((a, b) => Number(b?.created_at || 0) - Number(a?.created_at || 0))[0] || null;
         } catch (e) { lastErr = e; }
@@ -259,5 +267,9 @@ app.post('/api/razorpay', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Payment server running on port ${PORT}`);
-  console.log(`Using Razorpay key: ${RAZORPAY_KEY_ID}`);
+  console.log(
+    RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET
+      ? `Razorpay configured with key: ${RAZORPAY_KEY_ID}`
+      : 'Razorpay NOT configured — set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env'
+  );
 });

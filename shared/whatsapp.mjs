@@ -32,7 +32,16 @@ const TEMPLATE_PARAMS = String(process.env.WHATSAPP_TEMPLATE_PARAMS || '1').trim
 const SALE_TEMPLATE_NAME = String(process.env.WHATSAPP_SALE_TEMPLATE_NAME || 'sale_notify').trim();
 const SALE_TEMPLATE_LANG = String(process.env.WHATSAPP_SALE_TEMPLATE_LANG || 'en').trim();
 const GRAPH_VERSION   = String(process.env.WHATSAPP_GRAPH_VERSION || 'v23.0').trim();
-const APP_ORIGIN      = process.env.APP_ORIGIN || 'https://laxmiclothhouse-store.vercel.app';
+// Public store origin. APP_ORIGIN in Vercel wins; Vercel's own URL env vars
+// are the fallback so links stay correct without hardcoding a domain.
+const APP_ORIGIN = (() => {
+  const explicit = String(process.env.APP_ORIGIN || '').trim().replace(/\/+$/, '');
+  if (explicit) return explicit;
+  const vercelUrl = String(
+    process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || ''
+  ).trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  return vercelUrl ? `https://${vercelUrl}` : '';
+})();
 
 const TWILIO_SID      = process.env.TWILIO_ACCOUNT_SID || '';
 const TWILIO_TOKEN    = process.env.TWILIO_AUTH_TOKEN || '';

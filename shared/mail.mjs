@@ -13,8 +13,22 @@ const KEY = process.env.RESEND_API_KEY || '';
 const FROM_EMAIL = process.env.MAIL_FROM || 'onboarding@resend.dev';
 
 const MERCHANT_EMAIL = process.env.MERCHANT_EMAIL || '';
-const APP_ORIGIN = process.env.APP_ORIGIN || 'https://laxmiclothhouse-store.vercel.app';
-const STORE_NAME = process.env.STORE_NAME || 'Laxmiclothhouse Suit Collection';
+
+/**
+ * Public origin used to build track/order links. Set APP_ORIGIN in Vercel;
+ * otherwise Vercel's own VERCEL_PROJECT_PRODUCTION_URL / VERCEL_URL are used,
+ * and as a last resort links stay relative to the current host.
+ */
+const APP_ORIGIN = (() => {
+  const explicit = String(process.env.APP_ORIGIN || '').trim().replace(/\/+$/, '');
+  if (explicit) return explicit;
+  const vercelUrl = String(
+    process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || ''
+  ).trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  return vercelUrl ? `https://${vercelUrl}` : '';
+})();
+
+const STORE_NAME = String(process.env.STORE_NAME || '').trim() || 'Store';
 
 // Always use ASCII "Rs. " (never the ₹ glyph): several mail clients and
 // log pipelines in this repo are not UTF-8 clean, so the raw rupee sign

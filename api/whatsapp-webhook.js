@@ -5,11 +5,9 @@
 //
 // After deploy, subscribe in Meta App Dashboard:
 //   WhatsApp -> Configuration -> Webhook -> Callback URL + Verify token.
-// Env: WHATSAPP_VERIFY_TOKEN (must match the token pasted in Meta).
-
-const VERIFY_TOKEN = String(
-  process.env.WHATSAPP_VERIFY_TOKEN || 'REDACTED'
-).trim();
+// Env: WHATSAPP_VERIFY_TOKEN (set in Vercel; must match the token pasted
+// into the Meta webhook config). No default is baked into the code.
+const VERIFY_TOKEN = String(process.env.WHATSAPP_VERIFY_TOKEN || '').trim();
 
 function logStatus(s) {
   const id = s?.id || s?.message_id || '?';
@@ -38,6 +36,10 @@ export default async function handler(req, res) {
     const mode = q['hub.mode'];
     const token = q['hub.verify_token'];
     const challenge = q['hub.challenge'];
+    if (!VERIFY_TOKEN) {
+      console.error('[whatsapp-webhook] WHATSAPP_VERIFY_TOKEN is not set in Vercel environment variables');
+      return res.status(500).send('Webhook verify token not configured');
+    }
     if (mode === 'subscribe' && token === VERIFY_TOKEN && challenge) {
       console.log('[whatsapp-webhook] verified OK');
       res.setHeader('Content-Type', 'text/plain');

@@ -6,8 +6,20 @@ import { app } from '../firebase.js';
 import { STAFF_ROLES, ROLE_LABELS, isStaffRole } from '../orderFlow.js';
 
 const AuthContext = createContext(null);
-const auth = getAuth(app);
-const firestore = getFirestore(app);
+
+// The app works without Firebase (local-only store) until you add your own
+// project's VITE_FIREBASE_* variables. In that state `auth`/`firestore` stay
+// null and every helper below throws a clear "set up Firebase" message
+// instead of crashing the page at import time.
+const auth = app ? getAuth(app) : null;
+const firestore = app ? getFirestore(app) : null;
+
+const SETUP_MESSAGE =
+  'This store has no Firebase project yet. Add your own VITE_FIREBASE_* variables (see SETUP.md) and redeploy.';
+
+function requireFirebase() {
+  if (!auth || !firestore) throw new Error(SETUP_MESSAGE);
+}
 
 // â”€â”€ Firestore `users` directory cache (module scope so it survives re-renders) â”€â”€
 // Doc id = Firebase UID. Refreshed at most once per minute.
@@ -26,6 +38,13 @@ export function AuthProvider({ children }) {
 
   // Listen to Firebase Auth state changes
   useEffect(() => {
+    // No Firebase project → nothing to listen to. Keep any cached local
+    // session and let the store run local-only.
+    if (!auth) {
+      setLoading(false);
+      return undefined;
+    }
+
     let alive = true;
     // Safety net: if Firebase never answers (offline, blocked, misconfigured)
     // the app must not sit on the "checking session" screen forever.
@@ -78,6 +97,7 @@ export function AuthProvider({ children }) {
 
   const signup = async ({ name, email, password, phone, specialDate, specialDateType }) => {
     try {
+      requireFirebase();
       // Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
@@ -121,6 +141,7 @@ export function AuthProvider({ children }) {
 
   const login = async ({ email, password }) => {
     try {
+      requireFirebase();
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
 
@@ -153,7 +174,7 @@ export function AuthProvider({ children }) {
 
     const logout = async () => {
     try {
-      await signOut(auth);
+      if (auth) await signOut(auth);
       db.clearSession();
       setUser(null);
     } catch (error) {
@@ -166,6 +187,7 @@ export function AuthProvider({ children }) {
   // 1) Change password by verifying the current password first.
   const changePasswordWithCurrent = async (currentPassword, newPassword) => {
     try {
+      requireFirebase();
       const firebaseUser = auth.currentUser;
       if (!firebaseUser || !firebaseUser.email) throw new Error('No authenticated user.');
 
@@ -191,6 +213,7 @@ export function AuthProvider({ children }) {
   // â”€â”€ Profile update helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const updateUserProfile = async (data) => {
     try {
+      requireFirebase();
       const firebaseUser = auth.currentUser;
       if (!firebaseUser) throw new Error('No authenticated user.');
 
@@ -248,6 +271,7 @@ export function AuthProvider({ children }) {
   // â”€â”€ Password reset â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const sendPasswordReset = async (email) => {
     try {
+      requireFirebase();
       const { sendPasswordResetEmail } = await import('firebase/auth');
       await sendPasswordResetEmail(auth, email);
       return { ok: true };
@@ -260,7 +284,7 @@ export function AuthProvider({ children }) {
   };
 
   const getIdToken = async () => {
-    if (!auth.currentUser) throw new Error('You must be signed in.');
+    if (!auth || !auth.currentUser) throw new Error('You must be signed in.');
     return auth.currentUser.getIdToken();
   };
 
@@ -277,6 +301,7 @@ export function AuthProvider({ children }) {
   // partial name / email / phone finds the account.
   // Returns: [{ uid, name, email, phone, role }]
   const readUsersDirectory = async () => {
+    if (!firestore) return [];
     const now = Date.now();
     if (_usersDirCache && now - _usersDirAt < USERS_DIR_TTL) return _usersDirCache;
     try {
@@ -361,6 +386,7 @@ export function AuthProvider({ children }) {
   const fetchUserByUid = async (uid) => {
     const id = String(uid || '').trim();
     if (!id) throw new Error('Enter a UID.');
+    if (!firestore) throw new Error(SETUP_MESSAGE);
     try {
       const snap = await getDoc(doc(firestore, 'users', id));
       if (!snap.exists()) throw new Error('No profile found for this UID yet (they must log in on the site once).');
@@ -377,6 +403,7 @@ export function AuthProvider({ children }) {
     const id = String(uid || '').trim();
     if (!id) throw new Error('Missing user id.');
     if (!isAdmin) throw new Error('Only the admin can delete accounts.');
+    if (!firestore) throw new Error(SETUP_MESSAGE);
     try {
       await deleteDoc(doc(firestore, 'users', id));
       _usersDirCache = null;
@@ -399,6 +426,7 @@ export function AuthProvider({ children }) {
 
   const setUserRole = async (uid, role) => {
     try {
+      requireFirebase();
       const firebaseUser = auth.currentUser;
       if (!firebaseUser) throw new Error('No authenticated user.');
       if (!isAdmin) throw new Error('Only the admin can manage staff roles.');

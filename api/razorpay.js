@@ -17,13 +17,25 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'REDACTED';
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'REDACTED';
+// Credentials come from Vercel → Settings → Environment Variables only.
+// RAZORPAY_KEY_ID      public key id (rzp_live_… / rzp_test_…)
+// RAZORPAY_KEY_SECRET  secret — must NEVER be exposed to the browser.
+// Missing values fail the request instead of silently using a baked-in key.
+const RAZORPAY_KEY_ID = String(process.env.RAZORPAY_KEY_ID || '').trim();
+const RAZORPAY_KEY_SECRET = String(process.env.RAZORPAY_KEY_SECRET || '').trim();
 
-const razorpay = new Razorpay({
-  key_id: RAZORPAY_KEY_ID,
-  key_secret: RAZORPAY_KEY_SECRET,
-});
+function razorpayClient() {
+  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+    const missing = [
+      !RAZORPAY_KEY_ID ? 'RAZORPAY_KEY_ID' : null,
+      !RAZORPAY_KEY_SECRET ? 'RAZORPAY_KEY_SECRET' : null,
+    ].filter(Boolean);
+    const error = new Error(`Razorpay is not configured. Set ${missing.join(' and ')} in Vercel environment variables.`);
+    error.status = 500;
+    throw error;
+  }
+  return new Razorpay({ key_id: RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET });
+}
 
 async function createOrder(req, res) {
   const amountInRupees = Number(req.body?.amount);
@@ -36,7 +48,7 @@ async function createOrder(req, res) {
     receipt: 'rcpt_' + Date.now(),
     payment_capture: 1,
   };
-  const order = await razorpay.orders.create(options);
+  const order = await razorpayClient().orders.create(options);
   return res.json({
     order_id: order.id,
     amount: order.amount,
@@ -49,6 +61,9 @@ function verifyPayment(req, res) {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body || {};
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
     return res.status(400).json({ error: 'Missing payment details' });
+  }
+  if (!RAZORPAY_KEY_SECRET) {
+    return res.status(500).json({ valid: false, error: 'RAZORPAY_KEY_SECRET is not configured in Vercel environment variables.' });
   }
   const expected = crypto
     .createHmac('sha256', RAZORPAY_KEY_SECRET)
@@ -77,7 +92,7 @@ async function refund(req, res) {
       message: 'No Razorpay payment to refund. This order was COD or a demo payment - no money was charged.',
     });
   }
-  const refund = await razorpay.payments.refund(paymentRef, {
+  const refund = await razorpayClient().payments.refund(paymentRef, {
     amount: Math.round(amountInRupees * 100), // paise
     receipt: 'refund_' + String(orderId),
     notes: { orderId: String(orderId) },
@@ -102,7 +117,7 @@ async function refund(req, res) {
 
     if (refundId) {
       try {
-        refund = await razorpay.refunds.fetch(refundId);
+        refund = await razorpayClient().refunds.fetch(refundId);
       } catch (e) {
         lastErr = e;
       }
@@ -110,7 +125,7 @@ async function refund(req, res) {
 
     if (!refund && paymentRef && String(paymentRef).startsWith('pay_')) {
       try {
-        const list = await razorpay.refunds.all({ payment_id: paymentRef, count: 10 });
+        const list = await razorpayClient().refunds.all({ payment_id: paymentRef, count: 10 });
         const items = Array.isArray(list?.items)
           ? list.items
           : (Array.isArray(list) ? list : []);
@@ -170,6 +185,6 @@ export default async function handler(req, res) {
       err?.message ||
       'Request failed';
     console.error(`[razorpay:${action}] error:`, message);
-    return res.status(500).json({ error: message });
+    return res.status(err?.status || 500).json({ error: message });
   }
 }

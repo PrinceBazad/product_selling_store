@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { initFirebase, isFirebaseReady, firestoreSet, firestoreGet, firestoreListen } from './firebase.js';
+import { razorpayKeyId } from './config.js';
 
 const KEYS = {
   users: 'houselaxmicloth_users',
@@ -142,9 +143,10 @@ const DEFAULT_SETTINGS = {
   contactEmail: 'support@laxmiclothhouse.com',
   contactAddress:
     'Najafgarh Road, Near Balour More, Opp. Sector 9, Bahadurgarh — 124507',
-  // Razorpay merchant key. Use a TEST key for the sandbox,
-  // or your LIVE key for real payments. Managed in Admin → Settings.
-  razorpayKeyId: 'REDACTED',
+  // Razorpay merchant (public) key. Supplied by VITE_RAZORPAY_KEY_ID in
+  // Vercel → Settings → Environment Variables. Vercel wins over any value
+  // saved in Admin → Settings so the deployment stays the single source.
+  razorpayKeyId: razorpayKeyId,
   paymentMode: 'live',
   freeShippingThreshold: 1499,
   // Delivery promise in days (min-max window), used when Delhivery's live
@@ -237,7 +239,10 @@ export const db = {
     if (s === null) {
       s = seedSettings();
     }
-    return { ...DEFAULT_SETTINGS, ...s };
+    const merged = { ...DEFAULT_SETTINGS, ...s };
+    // Vercel env var is the source of truth for the Razorpay key.
+    if (razorpayKeyId) merged.razorpayKeyId = razorpayKeyId;
+    return merged;
   },
   saveSettings(s) {
     write(KEYS.settings, s);
