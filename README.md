@@ -41,6 +41,70 @@ cloud sync.
 
 ---
 
+## Environment variables
+
+Set every name below in **Vercel → Project → Settings → Environment Variables**
+(Production, plus Preview if you want preview deploys to work).
+
+- **Scope `Browser`** = the value is compiled into the site, so the name **must**
+  start with `VITE_` and a **redeploy is required** after you change it.
+- **Scope `Server`** = used only by the functions in `api/`; never sent to the browser.
+
+### Required
+
+| Variable | Scope | What it is for | Where to get it |
+| --- | --- | --- | --- |
+| `VITE_FIREBASE_API_KEY` | Browser | Firebase web API key | Firebase console → Project settings → General → Your apps → Web app |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Browser | Login domain, normally `<project-id>.firebaseapp.com` | same screen |
+| `VITE_FIREBASE_PROJECT_ID` | Browser | Project id — this is what ties the store to **your** database | same screen |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Browser | Storage bucket `<project-id>.firebasestorage.app` | same screen |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Browser | Cloud messaging sender id | same screen |
+| `VITE_FIREBASE_APP_ID` | Browser | Web app id `1:<sender>:web:<hash>` | same screen |
+| `FIREBASE_PROJECT_ID` | Server | Same project id, read by the serverless functions | Firebase console |
+| `FIREBASE_WEB_API_KEY` | Server | Same web API key, used for server-side profile lookups | Firebase console |
+| `RAZORPAY_KEY_ID` | Server | Creates and refunds orders server-side | Razorpay → Settings → API Keys |
+| `RAZORPAY_KEY_SECRET` | Server | Signs and verifies payments — **secret, never prefix with `VITE_`** | Razorpay → Settings → API Keys |
+| `VITE_RAZORPAY_KEY_ID` | Browser | Opens the checkout popup | Razorpay → Settings → API Keys (public `rzp_live_…` / `rzp_test_…`) |
+| `VITE_STORE_NAME` | Browser | Your store name (title, e-mails, PDFs) | your choice |
+| `VITE_APP_ORIGIN` | Browser | Your public site URL, used in share links | your Vercel domain, e.g. `https://myshop.vercel.app` |
+| `APP_ORIGIN` | Server | Same public URL for e-mail/WhatsApp links | same value; optional — falls back to Vercel's own `VERCEL_URL` |
+
+### Recommended (branding)
+
+| Variable | Scope | What it is for | Where to get it |
+| --- | --- | --- | --- |
+| `VITE_STORE_EMAIL` | Browser | Contact e-mail on the policy pages | your inbox, e.g. `support@yourstore.com` |
+| `VITE_CONTACT_PHONE` | Browser | Contact phone on the policy pages | your number |
+| `VITE_CONTACT_ADDRESS` | Browser | Registered address on the policy pages | your address |
+| `VITE_INSTAGRAM_URL` | Browser | Footer Instagram link — the icon is **hidden** when empty | your profile URL |
+| `STORE_NAME` | Server | Store name inside e-mails and WhatsApp messages | same as `VITE_STORE_NAME` |
+
+### Optional (extra services)
+
+| Variable | Scope | What it is for |
+| --- | --- | --- |
+| `RAZORPAY_WEBHOOK_SECRET` | Server | Verifies refund webhooks from `/api/razorpay-webhook` |
+| `RESEND_API_KEY` | Server | Sends order e-mails |
+| `MAIL_FROM` | Server | Sender address — must be on a domain verified at resend.com/domains |
+| `MERCHANT_EMAIL` | Server | Address that receives the store-owner copy of each order |
+| `WHATSAPP_ACCESS_TOKEN` | Server | Meta WhatsApp Cloud API token |
+| `WHATSAPP_PHONE_NUMBER_ID` | Server | Meta phone number id |
+| `WHATSAPP_VERIFY_TOKEN` | Server | Meta webhook verification token — must match the value typed in Meta |
+| `WHATSAPP_TEMPLATE_NAME` | Server | Approved order template (default `order_update`) |
+| `WHATSAPP_SALE_TEMPLATE_NAME` | Server | Approved marketing template (default `sale_notify`) |
+| `TWILIO_ACCOUNT_SID` | Server | Twilio fallback when Meta is not configured |
+| `TWILIO_AUTH_TOKEN` | Server | Twilio fallback |
+| `TWILIO_WHATSAPP_FROM` | Server | Twilio sender, e.g. `whatsapp:+14155238886` |
+| `DELHIVERY_API_TOKEN` | Server | Delhivery API token — enables live tracking and booking |
+| `DELHIVERY_PICKUP_NAME` | Server | Registered pickup location name |
+| `DELHIVERY_WEBHOOK_SECRET` | Server | Verifies Delhivery webhooks at `/api/delhivery` |
+| `VITE_FIREBASE_MEASUREMENT_ID` | Browser | Google Analytics measurement id (`G-…`), optional |
+
+Every name above is documented with comments in [`.env.example`](./.env.example),
+which you can copy to `.env` for local development.
+
+---
+
 ## Go live
 
 ### 1. Create your own Firebase project (free)
@@ -72,14 +136,9 @@ threshold and delivery window. Social links live in
 1. <https://vercel.com> → **Add New → Project → Import** this repository.
 2. Framework preset **Vite**; build `npm run build`; output `dist`
    (already configured in [`vercel.json`](./vercel.json)).
-3. In **Settings → Environment Variables** add (Production, and Preview if wanted):
-
-| Scope | Variables |
-| --- | --- |
-| Browser (`VITE_`) | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID`, `VITE_RAZORPAY_KEY_ID`, `VITE_APP_ORIGIN`, `VITE_STORE_NAME`, `VITE_STORE_EMAIL`, `VITE_CONTACT_PHONE`, `VITE_CONTACT_ADDRESS`, `VITE_INSTAGRAM_URL` |
-| Server | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `FIREBASE_PROJECT_ID`, `FIREBASE_WEB_API_KEY`, `APP_ORIGIN`, `STORE_NAME` |
-
-Set `APP_ORIGIN` to your Vercel URL (e.g. `https://myshop.vercel.app`).
+3. In **Settings → Environment Variables** add the **Required** and
+   **Recommended** variables from the
+   [environment variables table](#environment-variables) above.
 
 > `VITE_*` values are **inlined at build time** — after changing one, redeploy.
 > Anything without the `VITE_` prefix stays server-side and never reaches the browser.
